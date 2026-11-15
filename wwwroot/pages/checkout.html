@@ -1,0 +1,419 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Оформление заказа — FamiliaShop</title>
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+
+<header class="header">
+  <div id="appHeader"></div>
+</header>
+
+<main class="page">
+  <div style="margin-bottom:24px;">
+    <a href="/pages/catalog.html" class="btn btn-ghost btn-sm">← Продолжить покупки</a>
+  </div>
+  <h1 style="margin-bottom:32px;">Оформление заказа</h1>
+
+  <div id="checkoutNotAuth" style="display:none;">
+    <div class="empty-state">
+      <div class="empty-state-icon">🔐</div>
+      <h3>Войдите в аккаунт</h3>
+      <p>Для оформления заказа необходимо войти</p>
+      <button class="btn btn-accent" onclick="Modal.open('loginModal')">Войти / Зарегистрироваться</button>
+    </div>
+  </div>
+
+  <div id="checkoutEmpty" style="display:none;">
+    <div class="empty-state">
+      <div class="empty-state-icon">🛒</div>
+      <h3>Корзина пуста</h3>
+      <p>Добавьте товары из каталога</p>
+      <a href="/pages/catalog.html" class="btn btn-accent">В каталог</a>
+    </div>
+  </div>
+
+  <div id="checkoutContent" style="display:none;">
+    <div style="display:grid;grid-template-columns:1fr 380px;gap:32px;align-items:start;">
+
+      <!-- LEFT: FORM -->
+      <div style="display:flex;flex-direction:column;gap:24px;">
+
+        <!-- ADDRESS -->
+        <div class="card">
+          <h3 style="font-family:var(--font-body);font-weight:700;margin-bottom:20px;">📍 Адрес доставки</h3>
+
+          <div id="savedAddresses" style="display:flex;flex-direction:column;gap:10px;margin-bottom:16px;"></div>
+
+          <button class="btn btn-outline btn-sm" onclick="toggleNewAddress()" id="addAddrBtn">+ Добавить новый адрес</button>
+
+          <div id="newAddressForm" style="display:none;margin-top:16px;padding-top:16px;border-top:1px solid var(--border);">
+            <div class="form-row">
+              <div class="form-group">
+                <label class="form-label">Город / населённый пункт *</label>
+                <input class="form-input" id="addrCity" placeholder="Москва" data-validate="required">
+                <div class="field-error"></div>
+              </div>
+              <div class="form-group">
+                <label class="form-label">Почтовый индекс *</label>
+                <input class="form-input" id="addrIndex" placeholder="123456" data-validate="required">
+                <div class="field-error"></div>
+              </div>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Улица *</label>
+              <input class="form-input" id="addrStreet" placeholder="ул. Ленина" data-validate="required">
+              <div class="field-error"></div>
+            </div>
+            <div class="form-row">
+              <div class="form-group">
+                <label class="form-label">Дом *</label>
+                <input class="form-input" id="addrDom" placeholder="12А" data-validate="required">
+                <div class="field-error"></div>
+              </div>
+              <div class="form-group">
+                <label class="form-label">Квартира</label>
+                <input class="form-input" id="addrKv" placeholder="45">
+                <div class="field-error"></div>
+              </div>
+            </div>
+            <button class="btn btn-primary btn-sm" onclick="saveNewAddress()">Сохранить адрес</button>
+          </div>
+        </div>
+
+        <!-- DELIVERY METHOD -->
+        <div class="card">
+          <h3 style="font-family:var(--font-body);font-weight:700;margin-bottom:20px;">🚚 Способ получения</h3>
+          <div id="deliveryMethods" style="display:flex;flex-direction:column;gap:10px;">
+            <div class="spinner" style="width:24px;height:24px;border-width:2px;margin:0 auto;"></div>
+          </div>
+        </div>
+
+        <!-- PAYMENT METHOD -->
+        <div class="card">
+          <h3 style="font-family:var(--font-body);font-weight:700;margin-bottom:20px;">💳 Способ оплаты</h3>
+          <div id="paymentMethods" style="display:flex;flex-direction:column;gap:10px;">
+            <div class="spinner" style="width:24px;height:24px;border-width:2px;margin:0 auto;"></div>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- RIGHT: ORDER SUMMARY -->
+      <div style="position:sticky;top:88px;display:flex;flex-direction:column;gap:16px;">
+        <div class="card">
+          <h3 style="font-family:var(--font-body);font-weight:700;margin-bottom:16px;">Ваш заказ</h3>
+          <div id="orderItems" style="display:flex;flex-direction:column;gap:12px;margin-bottom:16px;"></div>
+
+          <div style="border-top:1px solid var(--border);padding-top:16px;">
+            <div id="couponInfo" style="display:none;background:var(--accent-soft);border-radius:var(--radius);padding:10px 14px;margin-bottom:12px;font-size:0.875rem;">
+              <span style="color:var(--accent);font-weight:600;" id="couponLabel"></span>
+              <button onclick="removeCoupon()" style="float:right;background:none;border:none;cursor:pointer;color:var(--mid);">✕</button>
+            </div>
+
+            <div style="display:flex;justify-content:space-between;font-size:0.875rem;color:var(--mid);margin-bottom:8px;">
+              <span>Товары</span><span id="summarySubtotal">0 ₽</span>
+            </div>
+            <div id="discountRow" style="display:none;justify-content:space-between;font-size:0.875rem;color:var(--accent);margin-bottom:8px;">
+              <span>Скидка по купону</span><span id="summaryDiscount"></span>
+            </div>
+            <div style="display:flex;justify-content:space-between;font-weight:700;font-size:1.1rem;margin-top:8px;padding-top:12px;border-top:1px solid var(--border);">
+              <span>Итого</span><span id="summaryTotal">0 ₽</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- COUPON -->
+        <div class="card card-sm">
+          <div style="font-size:0.8rem;font-weight:600;color:var(--mid);margin-bottom:8px;text-transform:uppercase;letter-spacing:0.5px;">Промокод</div>
+          <div style="display:flex;gap:8px;">
+            <input class="form-input" id="couponCode" placeholder="Введите промокод" style="flex:1;">
+            <button class="btn btn-outline" onclick="applyCouponCheckout()">Применить</button>
+          </div>
+        </div>
+
+        <button class="btn btn-accent btn-full btn-lg" onclick="placeOrder()" id="placeOrderBtn">
+          Оформить заказ
+        </button>
+        <p style="font-size:0.75rem;color:var(--mid);text-align:center;">
+          Нажимая кнопку, вы соглашаетесь с условиями покупки
+        </p>
+      </div>
+
+    </div>
+  </div>
+</main>
+
+<!-- Success Modal -->
+<div id="successModal" class="modal-overlay">
+  <div class="modal">
+    <div class="modal-body" style="text-align:center;padding:48px 32px;">
+      <div style="font-size:4rem;margin-bottom:16px;">🎉</div>
+      <h2 style="margin-bottom:12px;">Заказ оформлен!</h2>
+      <p style="color:var(--mid);margin-bottom:8px;">Номер вашего заказа: <strong id="successOrderId"></strong></p>
+      <p style="color:var(--mid);margin-bottom:28px;">Следить за статусом можно в личном кабинете</p>
+      <div style="display:flex;gap:12px;justify-content:center;flex-wrap:wrap;">
+        <a href="/pages/cabinet.html" class="btn btn-accent">Мои заказы</a>
+        <a href="/pages/catalog.html" class="btn btn-outline">Продолжить покупки</a>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div id="toastContainer" class="toast-container"></div>
+<script src="/js/api.js"></script>
+<script src="/js/app.js"></script>
+<script>
+let selectedAddressId = null;
+let selectedDeliveryId = null;
+let selectedPaymentId = null;
+let appliedCoupon = null;
+
+document.addEventListener('DOMContentLoaded', async () => {
+  const savedCoupon = sessionStorage.getItem('applied_coupon');
+  if (savedCoupon) {
+    try { appliedCoupon = JSON.parse(savedCoupon); } catch {}
+  }
+
+  await App.loadCart();
+
+  if (!App.currentUser) {
+    document.getElementById('checkoutNotAuth').style.display = 'block';
+    return;
+  }
+  if (!App.cart.length) {
+    document.getElementById('checkoutEmpty').style.display = 'block';
+    return;
+  }
+
+  document.getElementById('checkoutContent').style.display = 'block';
+  await Promise.all([loadAddresses(), loadDelivery(), loadPayment()]);
+  renderOrderSummary();
+  if (appliedCoupon) showCouponInfo(appliedCoupon);
+});
+
+async function loadAddresses() {
+  try {
+    const addrs = await api.buyers.getAddresses(App.currentUser.kod_pokupatelya);
+    const el = document.getElementById('savedAddresses');
+    if (!addrs.length) { el.innerHTML = ''; return; }
+    el.innerHTML = addrs.map(a => `
+      <label style="display:flex;align-items:flex-start;gap:12px;padding:12px 16px;border:2px solid var(--border);
+                    border-radius:var(--radius);cursor:pointer;transition:border-color 0.15s;"
+             id="addrLabel_${a.kod_adresa}"
+             onclick="selectAddress(${a.kod_adresa})">
+        <input type="radio" name="addr" value="${a.kod_adresa}" style="margin-top:2px;accent-color:var(--black)">
+        <div>
+          <div style="font-weight:600;font-size:0.875rem;">${a.naselennyy_punkt}, ${a.ulica} ${a.dom}${a.kvartira ? ', кв. ' + a.kvartira : ''}</div>
+          <div style="font-size:0.75rem;color:var(--mid);">Индекс: ${a.pochtovyy_indeks}</div>
+        </div>
+      </label>
+    `).join('');
+    if (addrs.length) selectAddress(addrs[0].kod_adresa);
+  } catch {}
+}
+
+function selectAddress(id) {
+  selectedAddressId = id;
+  document.querySelectorAll('[id^="addrLabel_"]').forEach(el => {
+    el.style.borderColor = el.id === `addrLabel_${id}` ? 'var(--black)' : 'var(--border)';
+  });
+  document.querySelector(`input[value="${id}"]`).checked = true;
+}
+
+function toggleNewAddress() {
+  const f = document.getElementById('newAddressForm');
+  f.style.display = f.style.display === 'none' ? 'block' : 'none';
+  // Очистка ошибок при открытии
+  f.querySelectorAll('.field-error').forEach(e => { e.style.display = 'none'; e.textContent = ''; });
+  f.querySelectorAll('.form-input').forEach(i => i.classList.remove('error'));
+}
+
+async function saveNewAddress() {
+  const form = document.getElementById('newAddressForm');
+  if (!validateForm(form)) {
+    Toast.show('Исправьте ошибки в форме', 'error');
+    return;
+  }
+  const city = document.getElementById('addrCity').value.trim();
+  const street = document.getElementById('addrStreet').value.trim();
+  const dom = document.getElementById('addrDom').value.trim();
+  const kv = document.getElementById('addrKv').value.trim();
+  const idx = document.getElementById('addrIndex').value.trim();
+  if (!city || !street || !dom || !idx) { Toast.show('Заполните обязательные поля', 'error'); return; }
+  try {
+    await api.buyers.addAddress({
+      kod_pokupatelya: App.currentUser.kod_pokupatelya,
+      naselennyy_punkt: city, ulica: street, dom, kvartira: kv || null, pochtovyy_indeks: idx
+    });
+    Toast.show('Адрес сохранён', 'success');
+    document.getElementById('newAddressForm').style.display = 'none';
+    await loadAddresses();
+  } catch (e) { Toast.show(e.message, 'error'); }
+}
+
+async function loadDelivery() {
+  try {
+    const methods = await api.refs.deliveryMethods();
+    const el = document.getElementById('deliveryMethods');
+    el.innerHTML = methods.map(m => `
+      <label style="display:flex;align-items:center;gap:12px;padding:12px 16px;border:2px solid var(--border);
+                    border-radius:var(--radius);cursor:pointer;transition:border-color 0.15s;"
+             id="dlvLabel_${m.kod_sposoba_polucheniya}"
+             onclick="selectDelivery(${m.kod_sposoba_polucheniya})">
+        <input type="radio" name="dlv" value="${m.kod_sposoba_polucheniya}" style="accent-color:var(--black)">
+        <div>
+          <div style="font-weight:600;font-size:0.875rem;">${m.nazvanie}</div>
+          ${m.opisanie ? `<div style="font-size:0.75rem;color:var(--mid);">${m.opisanie}</div>` : ''}
+        </div>
+      </label>
+    `).join('');
+    if (methods.length) selectDelivery(methods[0].kod_sposoba_polucheniya);
+  } catch {}
+}
+
+function selectDelivery(id) {
+  selectedDeliveryId = id;
+  document.querySelectorAll('[id^="dlvLabel_"]').forEach(el => {
+    el.style.borderColor = el.id === `dlvLabel_${id}` ? 'var(--black)' : 'var(--border)';
+  });
+  document.querySelector(`input[name="dlv"][value="${id}"]`).checked = true;
+}
+
+async function loadPayment() {
+  try {
+    const methods = await api.refs.paymentMethods();
+    const el = document.getElementById('paymentMethods');
+    const icons = { 'Карта': '💳', 'Наличные': '💵', 'СБП': '📱', 'Рассрочка': '📅' };
+    el.innerHTML = methods.map(m => {
+      const icon = Object.entries(icons).find(([k]) => m.nazvanie.includes(k))?.[1] || '💳';
+      return `
+        <label style="display:flex;align-items:center;gap:12px;padding:12px 16px;border:2px solid var(--border);
+                      border-radius:var(--radius);cursor:pointer;transition:border-color 0.15s;"
+               id="payLabel_${m.kod_sposoba_oplaty}"
+               onclick="selectPayment(${m.kod_sposoba_oplaty})">
+          <input type="radio" name="pay" value="${m.kod_sposoba_oplaty}" style="accent-color:var(--black)">
+          <span style="font-size:1.3rem;">${icon}</span>
+          <div>
+            <div style="font-weight:600;font-size:0.875rem;">${m.nazvanie}</div>
+            ${m.opisanie ? `<div style="font-size:0.75rem;color:var(--mid);">${m.opisanie}</div>` : ''}
+          </div>
+        </label>`;
+    }).join('');
+    if (methods.length) selectPayment(methods[0].kod_sposoba_oplaty);
+  } catch {}
+}
+
+function selectPayment(id) {
+  selectedPaymentId = id;
+  document.querySelectorAll('[id^="payLabel_"]').forEach(el => {
+    el.style.borderColor = el.id === `payLabel_${id}` ? 'var(--black)' : 'var(--border)';
+  });
+  document.querySelector(`input[name="pay"][value="${id}"]`).checked = true;
+}
+
+function calcTotal() {
+  const subtotal = App.getCartTotal();
+  if (!appliedCoupon) return { subtotal, discount: 0, total: subtotal };
+  let discount = 0;
+  if (appliedCoupon.tip_skidki === 'процентная') discount = subtotal * appliedCoupon.razmer_skidki / 100;
+  else discount = Math.min(appliedCoupon.razmer_skidki, subtotal);
+  return { subtotal, discount, total: Math.max(0, subtotal - discount) };
+}
+
+function renderOrderSummary() {
+  const cart = App.cart;
+  document.getElementById('orderItems').innerHTML = cart.map(item => `
+    <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;">
+      <div style="display:flex;align-items:center;gap:10px;flex:1;min-width:0;">
+        <div style="width:40px;height:52px;background:var(--bg);border-radius:6px;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:1.2rem;">👕</div>
+        <div style="min-width:0;">
+          <div style="font-size:0.85rem;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${item.naimenovanie}</div>
+          <div style="font-size:0.75rem;color:var(--mid);">× ${item.kolichestvo}</div>
+        </div>
+      </div>
+      <div style="font-weight:600;font-size:0.875rem;white-space:nowrap;">${fmt(item.cena * item.kolichestvo)}</div>
+    </div>
+  `).join('');
+
+  const { subtotal, discount, total } = calcTotal();
+  document.getElementById('summarySubtotal').textContent = fmt(subtotal);
+  document.getElementById('summaryTotal').textContent = fmt(total);
+  const discRow = document.getElementById('discountRow');
+  if (discount > 0) {
+    discRow.style.display = 'flex';
+    document.getElementById('summaryDiscount').textContent = `−${fmt(discount)}`;
+  } else {
+    discRow.style.display = 'none';
+  }
+}
+
+async function applyCouponCheckout() {
+  const code = document.getElementById('couponCode').value.trim();
+  if (!code) {
+    Toast.show('Введите промокод', 'error');
+    return;
+  }
+  try {
+    const kupon = await api.coupons.validate(code);
+    const { subtotal } = calcTotal();
+    if (subtotal < kupon.minimalnaya_summa_zakaza) {
+      Toast.show(`Минимальная сумма заказа для купона: ${fmt(kupon.minimalnaya_summa_zakaza)}`, 'error');
+      return;
+    }
+    appliedCoupon = kupon;
+    sessionStorage.setItem('applied_coupon', JSON.stringify(kupon));
+    showCouponInfo(kupon);
+    renderOrderSummary();
+    Toast.show('Промокод применён!', 'success');
+  } catch (e) { Toast.show(e.message, 'error'); }
+}
+
+function showCouponInfo(kupon) {
+  const label = kupon.tip_skidki === 'процентная'
+    ? `🏷️ Промокод «${kupon.promokod}» — скидка ${kupon.razmer_skidki}%`
+    : `🏷️ Промокод «${kupon.promokod}» — скидка ${fmt(kupon.razmer_skidki)}`;
+  document.getElementById('couponLabel').textContent = label;
+  document.getElementById('couponInfo').style.display = 'block';
+}
+
+function removeCoupon() {
+  appliedCoupon = null;
+  sessionStorage.removeItem('applied_coupon');
+  document.getElementById('couponInfo').style.display = 'none';
+  document.getElementById('couponCode').value = '';
+  renderOrderSummary();
+}
+
+async function placeOrder() {
+  if (!selectedAddressId) { Toast.show('Выберите адрес доставки', 'error'); return; }
+  if (!selectedDeliveryId) { Toast.show('Выберите способ получения', 'error'); return; }
+  if (!selectedPaymentId) { Toast.show('Выберите способ оплаты', 'error'); return; }
+
+  const btn = document.getElementById('placeOrderBtn');
+  btn.disabled = true;
+  btn.textContent = 'Оформляем...';
+
+  try {
+    const result = await api.orders.create({
+      kod_pokupatelya: App.currentUser.kod_pokupatelya,
+      kod_adresa: selectedAddressId,
+      kod_sposoba_polucheniya: selectedDeliveryId,
+      kod_sposoba_oplaty: selectedPaymentId,
+      kod_kupona: appliedCoupon?.kod_kupona || null
+    });
+    sessionStorage.removeItem('applied_coupon');
+    document.getElementById('successOrderId').textContent = `#${result.id}`;
+    Modal.open('successModal');
+  } catch (e) {
+    Toast.show(e.message, 'error');
+    btn.disabled = false;
+    btn.textContent = 'Оформить заказ';
+  }
+}
+</script>
+</body>
+</html>

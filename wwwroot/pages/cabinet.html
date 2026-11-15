@@ -1,0 +1,412 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Личный кабинет — FamiliaShop</title>
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+
+<header class="header">
+  <div id="appHeader"></div>
+</header>
+
+<main class="page">
+  <div id="cabinetNotAuth" style="display:none;">
+    <div class="empty-state">
+      <div class="empty-state-icon">🔐</div>
+      <h3>Войдите в аккаунт</h3>
+      <p>Чтобы увидеть личный кабинет, необходимо войти</p>
+      <button class="btn btn-accent" onclick="Modal.open('loginModal')">Войти</button>
+    </div>
+  </div>
+
+  <div id="cabinetContent" style="display:none;">
+    <!-- HEADER -->
+    <div style="display:flex;align-items:center;gap:20px;margin-bottom:36px;flex-wrap:wrap;">
+      <div style="width:64px;height:64px;background:var(--black);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:1.6rem;color:white;flex-shrink:0;">
+        👤
+      </div>
+      <div>
+        <h1 id="cabinetName" style="margin-bottom:4px;">—</h1>
+        <div id="cabinetEmail" style="color:var(--mid);font-size:0.9rem;"></div>
+      </div>
+      <button class="btn btn-outline btn-sm" style="margin-left:auto;" onclick="App.logout()">Выйти</button>
+    </div>
+
+    <div class="cabinet-grid">
+      <!-- NAV -->
+      <div>
+        <div class="card" style="padding:12px;">
+          <div class="cabinet-nav">
+            <button class="cabinet-nav-btn active" onclick="showSection('orders', this)">
+              <span class="icon">📦</span> Мои заказы
+            </button>
+            <button class="cabinet-nav-btn" onclick="showSection('profile', this)">
+              <span class="icon">👤</span> Профиль
+            </button>
+            <button class="cabinet-nav-btn" onclick="showSection('addresses', this)">
+              <span class="icon">📍</span> Адреса
+            </button>
+            <button class="cabinet-nav-btn" onclick="showSection('reviews', this)">
+              <span class="icon">💬</span> Мои отзывы
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- CONTENT -->
+      <div>
+
+        <!-- ORDERS -->
+        <div id="section-orders">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;flex-wrap:wrap;gap:12px;">
+            <h2>Мои заказы</h2>
+            <div style="display:flex;gap:8px;flex-wrap:wrap;" id="orderStatusFilter">
+              <button class="btn btn-sm btn-outline active-filter" onclick="filterOrders(null, this)">Все</button>
+              <button class="btn btn-sm btn-ghost" onclick="filterOrders('Оформлен', this)">Оформлен</button>
+              <button class="btn btn-sm btn-ghost" onclick="filterOrders('В сборке', this)">В сборке</button>
+              <button class="btn btn-sm btn-ghost" onclick="filterOrders('Передан в доставку', this)">В доставке</button>
+              <button class="btn btn-sm btn-ghost" onclick="filterOrders('Доставлен', this)">Доставлен</button>
+              <button class="btn btn-sm btn-ghost" onclick="filterOrders('Отменён', this)">Отменён</button>
+            </div>
+          </div>
+          <div id="ordersList">
+            <div class="loading-overlay"><div class="spinner"></div></div>
+          </div>
+        </div>
+
+        <!-- PROFILE -->
+        <div id="section-profile" style="display:none;">
+          <h2 style="margin-bottom:24px;">Профиль</h2>
+          <div class="card" style="max-width:480px;">
+            <div class="form-group">
+              <label class="form-label">Имя</label>
+              <input class="form-input" id="profileName" data-validate="required">
+              <div class="field-error"></div>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Email</label>
+              <input class="form-input" id="profileEmail" type="email" data-validate="required,email">
+              <div class="field-error"></div>
+              <div class="field-hint" style="font-size:0.75rem;color:var(--mid);margin-top:4px;">
+                Допустимы латинские буквы, цифры, точки, дефис, подчёркивание, @ и точка в домене
+              </div>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Телефон</label>
+              <input class="form-input phone-mask" id="profilePhone" data-validate="phone">
+              <div class="field-error"></div>
+            </div>
+            <button class="btn btn-primary" onclick="saveProfile()">Сохранить изменения</button>
+          </div>
+        </div>
+
+        <!-- ADDRESSES -->
+        <div id="section-addresses" style="display:none;">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:24px;">
+            <h2>Адреса доставки</h2>
+            <button class="btn btn-outline btn-sm" onclick="toggleAddAddrForm()">+ Добавить</button>
+          </div>
+
+          <div id="addAddrForm" class="card" style="display:none;margin-bottom:20px;max-width:520px;">
+            <h3 style="font-family:var(--font-body);font-weight:700;margin-bottom:16px;">Новый адрес</h3>
+            <div class="form-row">
+              <div class="form-group">
+                <label class="form-label">Город *</label>
+                <input class="form-input" id="newCity" placeholder="Москва" data-validate="required">
+                <div class="field-error"></div>
+              </div>
+              <div class="form-group">
+                <label class="form-label">Индекс *</label>
+                <input class="form-input" id="newIndex" placeholder="123456" data-validate="required">
+                <div class="field-error"></div>
+              </div>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Улица *</label>
+              <input class="form-input" id="newStreet" placeholder="ул. Ленина" data-validate="required">
+              <div class="field-error"></div>
+            </div>
+            <div class="form-row">
+              <div class="form-group">
+                <label class="form-label">Дом *</label>
+                <input class="form-input" id="newDom" placeholder="12А" data-validate="required">
+                <div class="field-error"></div>
+              </div>
+              <div class="form-group">
+                <label class="form-label">Квартира</label>
+                <input class="form-input" id="newKv" placeholder="45">
+                <div class="field-error"></div>
+              </div>
+            </div>
+            <div style="display:flex;gap:10px;">
+              <button class="btn btn-primary" onclick="addAddress()">Сохранить</button>
+              <button class="btn btn-ghost" onclick="toggleAddAddrForm()">Отмена</button>
+            </div>
+          </div>
+
+          <div id="addressesList">
+            <div class="loading-overlay"><div class="spinner"></div></div>
+          </div>
+        </div>
+
+        <!-- REVIEWS -->
+        <div id="section-reviews" style="display:none;">
+          <h2 style="margin-bottom:24px;">Мои отзывы</h2>
+          <div id="reviewsList">
+            <div class="loading-overlay"><div class="spinner"></div></div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+</main>
+
+<!-- Order Detail Modal -->
+<div id="orderDetailModal" class="modal-overlay">
+  <div class="modal" style="max-width:640px;">
+    <div class="modal-header">
+      <h2 id="orderDetailTitle">Заказ</h2>
+      <button class="modal-close" onclick="Modal.close('orderDetailModal')">✕</button>
+    </div>
+    <div class="modal-body" id="orderDetailBody"></div>
+  </div>
+</div>
+
+<div id="toastContainer" class="toast-container"></div>
+<script src="/js/api.js"></script>
+<script src="/js/app.js"></script>
+<script>
+let allOrders = [];
+
+document.addEventListener('DOMContentLoaded', async () => {
+  if (!App.currentUser) {
+    document.getElementById('cabinetNotAuth').style.display = 'block';
+    return;
+  }
+  document.getElementById('cabinetContent').style.display = 'block';
+
+  const u = App.currentUser;
+  document.getElementById('cabinetName').textContent = u.imya;
+  document.getElementById('cabinetEmail').textContent = u.email;
+  document.getElementById('profileName').value = u.imya || '';
+  document.getElementById('profileEmail').value = u.email || '';
+  document.getElementById('profilePhone').value = u.telefon || '';
+
+  await loadOrders();
+});
+
+function showSection(name, btn) {
+  document.querySelectorAll('[id^="section-"]').forEach(s => s.style.display = 'none');
+  document.getElementById(`section-${name}`).style.display = 'block';
+  document.querySelectorAll('.cabinet-nav-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+
+  if (name === 'addresses') loadAddresses();
+  if (name === 'reviews') loadReviews();
+}
+
+// ===== ORDERS =====
+async function loadOrders() {
+  try {
+    allOrders = await api.buyers.getOrders(App.currentUser.kod_pokupatelya);
+    renderOrders(allOrders);
+  } catch {
+    document.getElementById('ordersList').innerHTML = '<p style="color:var(--mid)">Ошибка загрузки</p>';
+  }
+}
+
+function filterOrders(status, btn) {
+  document.querySelectorAll('#orderStatusFilter button').forEach(b => {
+    b.className = 'btn btn-sm btn-ghost';
+  });
+  btn.className = 'btn btn-sm btn-outline active-filter';
+  const filtered = status ? allOrders.filter(o => o.status === status) : allOrders;
+  renderOrders(filtered);
+}
+
+function renderOrders(orders) {
+  const el = document.getElementById('ordersList');
+  if (!orders.length) {
+    el.innerHTML = `<div class="empty-state"><div class="empty-state-icon">📦</div><h3>Заказов нет</h3><p>Перейдите в каталог и оформите первый заказ</p><a href="/pages/catalog.html" class="btn btn-accent">В каталог</a></div>`;
+    return;
+  }
+  el.innerHTML = `
+    <div class="card" style="padding:0;overflow:hidden;">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>№</th>
+            <th>Дата</th>
+            <th>Способ</th>
+            <th>Сумма</th>
+            <th>Статус</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody>
+          ${orders.map(o => `
+            <tr>
+              <td><strong>#${o.kod_zakaza}</strong></td>
+              <td>${fmtDate(o.data_oformleniya)}</td>
+              <td style="font-size:0.8rem;color:var(--mid);">${o.sposob_polucheniya || '—'}</td>
+              <td><strong>${fmt(o.itogovaya_summa)}</strong></td>
+              <td>${statusBadge(o.status)}</td>
+              <td><button class="btn btn-ghost btn-sm" onclick="viewOrder(${o.kod_zakaza})">Детали →</button></td>
+            </tr>
+          `).join('')}
+        </tbody>
+      </table>
+    </div>`;
+}
+
+async function viewOrder(id) {
+  try {
+    const order = await api.orders.getById(id);
+    document.getElementById('orderDetailTitle').textContent = `Заказ #${order.kod_zakaza}`;
+    document.getElementById('orderDetailBody').innerHTML = `
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:20px;">
+        <div><div style="font-size:0.75rem;color:var(--mid);margin-bottom:4px;">СТАТУС</div>${statusBadge(order.status)}</div>
+        <div><div style="font-size:0.75rem;color:var(--mid);margin-bottom:4px;">ДАТА</div><strong>${fmtDate(order.data_oformleniya)}</strong></div>
+        <div><div style="font-size:0.75rem;color:var(--mid);margin-bottom:4px;">ДОСТАВКА</div><strong>${order.sposob_polucheniya || '—'}</strong></div>
+        <div><div style="font-size:0.75rem;color:var(--mid);margin-bottom:4px;">ОПЛАТА</div><strong>${order.sposob_oplaty || '—'}</strong></div>
+        ${order.adres_polnyy ? `<div style="grid-column:1/-1"><div style="font-size:0.75rem;color:var(--mid);margin-bottom:4px;">АДРЕС</div><strong>${order.adres_polnyy}</strong></div>` : ''}
+        ${order.promokod ? `<div><div style="font-size:0.75rem;color:var(--mid);margin-bottom:4px;">ПРОМОКОД</div><strong>${order.promokod}</strong></div>` : ''}
+      </div>
+      <div style="border-top:1px solid var(--border);padding-top:16px;margin-bottom:16px;">
+        <div style="font-size:0.8rem;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--mid);margin-bottom:12px;">Состав заказа</div>
+        ${(order.tovary || []).map(t => `
+          <div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border);font-size:0.875rem;">
+            <div>
+              <div style="font-weight:500;">${t.naimenovanie}</div>
+              <div style="color:var(--mid);font-size:0.75rem;">Арт. ${t.artikul} · ${t.kolichestvo} шт.</div>
+            </div>
+            <div style="font-weight:700;">${fmt(t.cena_na_moment_pokupki * t.kolichestvo)}</div>
+          </div>
+        `).join('')}
+      </div>
+      <div style="display:flex;justify-content:space-between;font-size:1.1rem;font-weight:700;">
+        <span>Итого</span><span>${fmt(order.itogovaya_summa)}</span>
+      </div>`;
+    Modal.open('orderDetailModal');
+  } catch (e) { Toast.show(e.message, 'error'); }
+}
+
+// ===== PROFILE =====
+async function saveProfile() {
+  const form = document.querySelector('#section-profile .card');
+  if (!validateForm(form)) {
+    Toast.show('Исправьте ошибки в форме', 'error');
+    return;
+  }
+  const name = document.getElementById('profileName').value.trim();
+  const email = document.getElementById('profileEmail').value.trim();
+  const phone = document.getElementById('profilePhone').value.trim() || null;
+  if (!name || !email) { Toast.show('Заполните имя и email', 'error'); return; }
+  try {
+    await api.buyers.update(App.currentUser.kod_pokupatelya, { imya: name, email, telefon: phone });
+    const updated = { ...App.currentUser, imya: name, email, telefon: phone };
+    App.setUser(updated);
+    document.getElementById('cabinetName').textContent = name;
+    document.getElementById('cabinetEmail').textContent = email;
+    renderHeader();
+    Toast.show('Профиль обновлён', 'success');
+  } catch (e) { Toast.show(e.message, 'error'); }
+}
+
+// ===== ADDRESSES =====
+async function loadAddresses() {
+  try {
+    const addrs = await api.buyers.getAddresses(App.currentUser.kod_pokupatelya);
+    const el = document.getElementById('addressesList');
+    if (!addrs.length) {
+      el.innerHTML = `<div class="empty-state"><div class="empty-state-icon">📍</div><h3>Нет сохранённых адресов</h3></div>`;
+      return;
+    }
+    el.innerHTML = `<div style="display:flex;flex-direction:column;gap:12px;">
+      ${addrs.map(a => `
+        <div class="card card-sm" style="display:flex;align-items:center;gap:16px;">
+          <div style="font-size:1.5rem;">📍</div>
+          <div style="flex:1;">
+            <div style="font-weight:600;">${a.naselennyy_punkt}, ${a.ulica} ${a.dom}${a.kvartira ? ', кв. ' + a.kvartira : ''}</div>
+            <div style="font-size:0.75rem;color:var(--mid);">Индекс: ${a.pochtovyy_indeks}</div>
+          </div>
+        </div>
+      `).join('')}
+    </div>`;
+  } catch {}
+}
+
+function toggleAddAddrForm() {
+  const f = document.getElementById('addAddrForm');
+  f.style.display = f.style.display === 'none' ? 'block' : 'none';
+  f.querySelectorAll('.field-error').forEach(e => { e.style.display = 'none'; e.textContent = ''; });
+  f.querySelectorAll('.form-input').forEach(i => i.classList.remove('error'));
+}
+
+async function addAddress() {
+  const form = document.getElementById('addAddrForm');
+  if (!validateForm(form)) {
+    Toast.show('Исправьте ошибки в форме', 'error');
+    return;
+  }
+  const city = document.getElementById('newCity').value.trim();
+  const street = document.getElementById('newStreet').value.trim();
+  const dom = document.getElementById('newDom').value.trim();
+  const kv = document.getElementById('newKv').value.trim();
+  const idx = document.getElementById('newIndex').value.trim();
+  if (!city || !street || !dom || !idx) { Toast.show('Заполните обязательные поля', 'error'); return; }
+  try {
+    await api.buyers.addAddress({
+      kod_pokupatelya: App.currentUser.kod_pokupatelya,
+      naselennyy_punkt: city, ulica: street, dom, kvartira: kv || null, pochtovyy_indeks: idx
+    });
+    Toast.show('Адрес добавлен', 'success');
+    document.getElementById('addAddrForm').style.display = 'none';
+    await loadAddresses();
+  } catch (e) { Toast.show(e.message, 'error'); }
+}
+
+// ===== REVIEWS =====
+async function loadReviews() {
+  try {
+    const reviews = await api.reviews.byBuyer(App.currentUser.kod_pokupatelya);
+    const el = document.getElementById('reviewsList');
+    if (!reviews.length) {
+      el.innerHTML = `<div class="empty-state"><div class="empty-state-icon">💬</div><h3>Вы ещё не оставляли отзывов</h3><p>Купите товар и поделитесь мнением</p></div>`;
+      return;
+    }
+    el.innerHTML = `<div class="card" style="padding:0;overflow:hidden;">
+      ${reviews.map(r => `
+        <div class="review-item" style="padding:20px 24px;">
+          <div style="display:flex;justify-content:space-between;align-items:start;gap:12px;flex-wrap:wrap;">
+            <div>
+              <div style="font-weight:600;margin-bottom:4px;">${r.naimenovanie || 'Товар'}</div>
+              <div style="display:flex;align-items:center;gap:8px;">
+                <span style="color:#f59e0b;">${stars(r.ocenka)}</span>
+                <span style="font-size:0.75rem;color:var(--mid);">${fmtDate(r.data)}</span>
+              </div>
+            </div>
+            <button class="btn btn-ghost btn-sm" style="color:var(--accent);" onclick="deleteReview(${r.kod_otzyva})">Удалить</button>
+          </div>
+          ${r.tekst ? `<p style="margin-top:10px;font-size:0.875rem;color:var(--charcoal);">${r.tekst}</p>` : ''}
+        </div>
+      `).join('')}
+    </div>`;
+  } catch {}
+}
+
+async function deleteReview(id) {
+  if (!confirm('Удалить отзыв?')) return;
+  try {
+    await api.reviews.delete(id);
+    Toast.show('Отзыв удалён');
+    await loadReviews();
+  } catch (e) { Toast.show(e.message, 'error'); }
+}
+</script>
+</body>
+</html>

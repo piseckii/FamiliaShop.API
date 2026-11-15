@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>FamiliaShop — Магазин одежды</title>
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+
+<header class="header">
+  <div id="appHeader"></div>
+</header>
+
+<main class="page">
+  <!-- HERO -->
+  <section class="hero">
+    <div class="hero-eyebrow">Новая коллекция · Весна–Лето 2025</div>
+    <h1>Мода для<br>каждого дня</h1>
+    <p>Тысячи товаров от лучших брендов. Скидки до 70% на прошлые коллекции каждый день.</p>
+    <div class="hero-actions">
+      <a href="/pages/catalog.html" class="btn btn-accent btn-lg">Смотреть каталог</a>
+      <button class="btn btn-outline btn-lg" style="color:white;border-color:rgba(255,255,255,0.3)"
+              onclick="Modal.open('loginModal')">Войти в аккаунт</button>
+    </div>
+  </section>
+
+  <!-- CATEGORIES QUICK NAV -->
+  <section style="margin-bottom:48px;">
+    <h2 style="margin-bottom:24px;">Популярные категории</h2>
+    <div id="categoriesGrid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:12px;">
+      <div class="loading-overlay"><div class="spinner"></div></div>
+    </div>
+  </section>
+
+  <!-- FEATURED PRODUCTS -->
+  <section>
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:24px;">
+      <h2>Новинки и хиты</h2>
+      <a href="/pages/catalog.html" class="btn btn-ghost">Все товары →</a>
+    </div>
+    <div id="featuredProducts" class="product-grid">
+      <div class="loading-overlay" style="grid-column:1/-1"><div class="spinner"></div></div>
+    </div>
+  </section>
+
+  <!-- PROMO BANNER -->
+  <section style="margin-top:48px;">
+    <div style="background:var(--accent-soft);border-radius:var(--radius-lg);padding:40px;display:flex;justify-content:space-between;align-items:center;gap:24px;flex-wrap:wrap;">
+      <div>
+        <div style="font-size:0.7rem;font-weight:700;text-transform:uppercase;letter-spacing:2px;color:var(--accent);margin-bottom:8px;">Спецпредложение</div>
+        <h2 style="margin-bottom:8px;">Используй промокод</h2>
+        <p style="color:var(--mid);">Получи скидку на первый заказ при регистрации</p>
+      </div>
+      <div style="text-align:center;">
+        <div style="font-family:var(--font-display);font-size:2.5rem;font-weight:700;color:var(--accent);letter-spacing:4px;border:2px dashed var(--accent);padding:12px 24px;border-radius:var(--radius);">FAMILIA10</div>
+        <div style="font-size:0.75rem;color:var(--mid);margin-top:8px;">−10% на первый заказ</div>
+      </div>
+    </div>
+  </section>
+</main>
+
+<div id="toastContainer" class="toast-container"></div>
+
+<script src="/js/api.js"></script>
+<script src="/js/app.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', async () => {
+  // Load categories
+  try {
+    const cats = await api.refs.categories();
+    const catEl = document.getElementById('categoriesGrid');
+    if (!cats.length) {
+      catEl.innerHTML = '<p style="color:var(--mid);grid-column:1/-1">Категории не найдены</p>';
+    } else {
+      catEl.innerHTML = cats.slice(0, 8).map(c => `
+        <a href="/pages/catalog.html?kategoria=${c.kod_kategorii}" 
+           style="background:var(--white);border:1px solid var(--border);border-radius:var(--radius-lg);
+                  padding:20px 16px;text-align:center;text-decoration:none;
+                  transition:all 0.2s;display:block;"
+           onmouseover="this.style.borderColor='var(--black)'"
+           onmouseout="this.style.borderColor='var(--border)'">
+          <div style="font-size:2rem;margin-bottom:8px;">👗</div>
+          <div style="font-size:0.85rem;font-weight:600;color:var(--black)">${c.nazvanie}</div>
+        </a>
+      `).join('');
+    }
+  } catch (e) {
+    document.getElementById('categoriesGrid').innerHTML = '<p style="color:var(--mid)">Ошибка загрузки</p>';
+  }
+
+  // Load featured products (first 8)
+  try {
+    const products = await api.products.getAll();
+    const el = document.getElementById('featuredProducts');
+    if (!products.length) {
+      el.innerHTML = '<div class="empty-state" style="grid-column:1/-1"><div class="empty-state-icon">📦</div><h3>Товары не найдены</h3><p>Добавьте товары через панель администратора</p></div>';
+    } else {
+      el.innerHTML = products.slice(0, 8).map(p => productCard(p)).join('');
+    }
+  } catch (e) {
+    document.getElementById('featuredProducts').innerHTML = '<p style="color:var(--mid)">Ошибка загрузки товаров</p>';
+  }
+});
+
+function productCard(p) {
+  const hasDiscount = p.skidki && p.skidki.length > 0;
+  const discount = hasDiscount ? p.skidki[0] : null;
+  let priceHtml = `<span class="price-current">${fmt(p.cena)}</span>`;
+  if (discount && discount.tip === 'процентная') {
+    const old = p.cena;
+    const newP = old * (1 - discount.razmer / 100);
+    priceHtml = `<span class="price-current">${fmt(newP)}</span><span class="price-old">${fmt(old)}</span><span class="price-discount">−${discount.razmer}%</span>`;
+  }
+  return `
+    <div class="product-card" onclick="window.location='/pages/product.html?id=${p.kod_tovara}'">
+      ${hasDiscount ? `<div class="product-badge">−${discount.razmer}${discount.tip === 'процентная' ? '%' : ' ₽'}</div>` : ''}
+      <div class="product-img">👕</div>
+      <div class="product-info">
+        <div class="product-brand">${p.brand || '—'}</div>
+        <div class="product-name">${p.naimenovanie}</div>
+        ${p.razmer ? `<div class="product-size">Размер: ${p.razmer}</div>` : ''}
+        <div class="product-price">${priceHtml}</div>
+        ${p.srednyaya_ocenka ? `<div class="product-rating"><span class="stars">${stars(p.srednyaya_ocenka)}</span> ${p.srednyaya_ocenka} (${p.kolichestvo_otzyvov})</div>` : ''}
+      </div>
+      <button class="product-add-btn" onclick="event.stopPropagation();App.addToCart(${JSON.stringify(p).replace(/"/g,'&quot;')})">+</button>
+    </div>
+  `;
+}
+</script>
+</body>
+</html>

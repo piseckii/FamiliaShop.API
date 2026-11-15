@@ -1,0 +1,261 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Каталог — FamiliaShop</title>
+  <link rel="stylesheet" href="/css/style.css">
+  <style>
+    /* Добавляем стиль для выделенного размера */
+    #filterSizes span.selected {
+      border-color: var(--black) !important;
+      background: var(--accent-soft) !important;
+    }
+  </style>
+</head>
+<body>
+
+<header class="header">
+  <div id="appHeader"></div>
+</header>
+
+<main class="page">
+  <div style="display:flex;align-items:center;gap:16px;margin-bottom:28px;flex-wrap:wrap;">
+    <h1 style="flex:1">Каталог</h1>
+    <div id="resultsCount" style="color:var(--mid);font-size:0.875rem;"></div>
+    <select class="form-select" style="width:auto" onchange="sortProducts(this.value)">
+      <option value="">Сортировка</option>
+      <option value="price_asc">Цена: по возрастанию</option>
+      <option value="price_desc">Цена: по убыванию</option>
+      <option value="rating">По рейтингу</option>
+    </select>
+  </div>
+
+  <div class="catalog-layout">
+    <!-- FILTERS -->
+    <aside class="filters-panel">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;">
+        <strong>Фильтры</strong>
+        <button class="btn btn-ghost btn-sm" onclick="clearFilters()">Сбросить</button>
+      </div>
+
+      <div class="filter-title">Категория</div>
+      <div id="filterCategories">
+        <div class="spinner" style="width:20px;height:20px;margin:8px auto;border-width:2px;"></div>
+      </div>
+
+      <div class="filter-title">Бренд</div>
+      <div id="filterBrands">
+        <div class="spinner" style="width:20px;height:20px;margin:8px auto;border-width:2px;"></div>
+      </div>
+
+      <div class="filter-title">Размер</div>
+      <div id="filterSizes">
+        <div class="spinner" style="width:20px;height:20px;margin:8px auto;border-width:2px;"></div>
+      </div>
+
+      <div class="filter-title">Цена (₽)</div>
+      <div class="price-range">
+        <input type="number" id="priceMin" placeholder="От" class="form-input" onchange="applyFilters()" data-validate="positive" min="0">
+        <span style="color:var(--mid)">—</span>
+        <input type="number" id="priceMax" placeholder="До" class="form-input" onchange="applyFilters()" data-validate="positive" min="0">
+      </div>
+
+      <div style="margin-top:20px;">
+        <button class="btn btn-primary btn-full" onclick="applyFilters()">Показать</button>
+      </div>
+    </aside>
+
+    <!-- PRODUCTS -->
+    <div>
+      <div id="activeFilters" style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:16px;"></div>
+      <div id="productGrid" class="product-grid">
+        <div class="loading-overlay" style="grid-column:1/-1"><div class="spinner"></div></div>
+      </div>
+    </div>
+  </div>
+</main>
+
+<div id="toastContainer" class="toast-container"></div>
+
+<script src="/js/api.js"></script>
+<script src="/js/app.js"></script>
+<script>
+let allProducts = [];
+let filteredProducts = [];
+let selectedKat = null, selectedBrand = null, selectedSize = null;
+
+document.addEventListener('DOMContentLoaded', async () => {
+  const params = new URLSearchParams(window.location.search);
+  if (params.get('kategoria')) selectedKat = parseInt(params.get('kategoria'));
+  if (params.get('search')) {
+    document.getElementById('globalSearch') && (document.getElementById('globalSearch').value = params.get('search'));
+  }
+
+  await Promise.all([loadFilters(), loadProducts()]);
+
+  // Подсветка выбранного размера (после загрузки фильтров)
+  document.querySelectorAll('input[name="size"]').forEach(radio => {
+    radio.addEventListener('change', function() {
+      document.querySelectorAll('[id^="sizeBtn_"]').forEach(span => {
+        span.classList.remove('selected');
+        span.style.borderColor = 'var(--border)';
+        span.style.background = 'transparent';
+      });
+      if (this.checked) {
+        const span = document.getElementById('sizeBtn_' + this.value);
+        if (span) {
+          span.classList.add('selected');
+          span.style.borderColor = 'var(--black)';
+          span.style.background = 'var(--accent-soft)';
+        }
+      }
+    });
+  });
+});
+
+async function loadFilters() {
+  try {
+    const [cats, brands, sizes] = await Promise.all([
+      api.refs.categories(),
+      api.refs.brands(),
+      api.refs.sizes()
+    ]);
+
+    document.getElementById('filterCategories').innerHTML = cats.map(c => `
+      <label class="filter-option">
+        <input type="radio" name="cat" value="${c.kod_kategorii}" 
+               ${selectedKat === c.kod_kategorii ? 'checked' : ''}
+               onchange="selectedKat=${c.kod_kategorii};applyFilters()">
+        ${c.nazvanie}
+      </label>
+    `).join('');
+
+    document.getElementById('filterBrands').innerHTML = brands.map(b => `
+      <label class="filter-option">
+        <input type="radio" name="brand" value="${b.kod_brenda}"
+               onchange="selectedBrand=${b.kod_brenda};applyFilters()">
+        ${b.nazvanie}
+      </label>
+    `).join('');
+
+    const byType = {};
+    sizes.forEach(s => {
+      if (!byType[s.tip_razmernoy_setki]) byType[s.tip_razmernoy_setki] = [];
+      byType[s.tip_razmernoy_setki].push(s);
+    });
+
+    document.getElementById('filterSizes').innerHTML = Object.entries(byType).map(([type, sArr]) => `
+      <div style="font-size:0.75rem;color:var(--mid);margin-bottom:4px;margin-top:8px;">${type}</div>
+      <div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px;">
+        ${sArr.map(s => `
+          <label style="cursor:pointer;">
+            <input type="radio" name="size" value="${s.kod_razmera}" style="display:none"
+                   onchange="selectedSize=${s.kod_razmera};applyFilters()">
+            <span style="display:inline-block;padding:4px 10px;border:1.5px solid var(--border);
+                         border-radius:6px;font-size:0.8rem;transition:all 0.15s;user-select:none;"
+                  onclick="this.previousElementSibling.click()"
+                  id="sizeBtn_${s.kod_razmera}">${s.znachenie}</span>
+          </label>
+        `).join('')}
+      </div>
+    `).join('');
+  } catch {}
+}
+
+async function loadProducts() {
+  try {
+    const params = new URLSearchParams(window.location.search);
+    const queryParams = {};
+    if (selectedKat) queryParams.kategoria = selectedKat;
+    if (selectedBrand) queryParams.brand = selectedBrand;
+    if (selectedSize) queryParams.razmer = selectedSize;
+    if (params.get('search')) queryParams.search = params.get('search');
+    const minP = document.getElementById('priceMin')?.value;
+    const maxP = document.getElementById('priceMax')?.value;
+    if (minP && minP >= 0) queryParams.minPrice = minP;
+    if (maxP && maxP >= 0) queryParams.maxPrice = maxP;
+
+    allProducts = await api.products.getAll(queryParams);
+    filteredProducts = [...allProducts];
+    renderProducts();
+  } catch (e) {
+    document.getElementById('productGrid').innerHTML = `<p style="color:var(--mid);grid-column:1/-1">Ошибка загрузки товаров</p>`;
+  }
+}
+
+function applyFilters() {
+  const min = parseFloat(document.getElementById('priceMin').value);
+  const max = parseFloat(document.getElementById('priceMax').value);
+  if (min && max && min > max) {
+    Toast.show('Минимальная цена не может быть больше максимальной', 'error');
+    return;
+  }
+  loadProducts();
+}
+
+function clearFilters() {
+  selectedKat = null;
+  selectedBrand = null;
+  selectedSize = null;
+  document.querySelectorAll('input[name="cat"], input[name="brand"], input[name="size"]').forEach(i => i.checked = false);
+  document.getElementById('priceMin').value = '';
+  document.getElementById('priceMax').value = '';
+  // Сбросить подсветку размеров
+  document.querySelectorAll('[id^="sizeBtn_"]').forEach(span => {
+    span.classList.remove('selected');
+    span.style.borderColor = 'var(--border)';
+    span.style.background = 'transparent';
+  });
+  loadProducts();
+}
+
+function sortProducts(val) {
+  if (val === 'price_asc') filteredProducts.sort((a,b) => a.cena - b.cena);
+  else if (val === 'price_desc') filteredProducts.sort((a,b) => b.cena - a.cena);
+  else if (val === 'rating') filteredProducts.sort((a,b) => (b.srednyaya_ocenka || 0) - (a.srednyaya_ocenka || 0));
+  renderProducts();
+}
+
+function renderProducts() {
+  const el = document.getElementById('productGrid');
+  const countEl = document.getElementById('resultsCount');
+  if (countEl) countEl.textContent = `Найдено: ${filteredProducts.length} товаров`;
+
+  if (!filteredProducts.length) {
+    el.innerHTML = `
+      <div class="empty-state" style="grid-column:1/-1">
+        <div class="empty-state-icon">🔍</div>
+        <h3>Товары не найдены</h3>
+        <p>Попробуйте изменить фильтры или поисковый запрос</p>
+        <button class="btn btn-outline" onclick="clearFilters()">Сбросить фильтры</button>
+      </div>`;
+    return;
+  }
+
+  el.innerHTML = filteredProducts.map(p => {
+    const hasDiscount = p.skidki && p.skidki.length > 0;
+    const discount = hasDiscount ? p.skidki[0] : null;
+    let priceHtml = `<span class="price-current">${fmt(p.cena)}</span>`;
+    if (discount && discount.tip === 'процентная') {
+      const newP = p.cena * (1 - discount.razmer / 100);
+      priceHtml = `<span class="price-current">${fmt(newP)}</span><span class="price-old">${fmt(p.cena)}</span><span class="price-discount">−${discount.razmer}%</span>`;
+    }
+    return `
+      <div class="product-card" onclick="window.location='/pages/product.html?id=${p.kod_tovara}'">
+        ${hasDiscount ? `<div class="product-badge">−${discount.razmer}${discount.tip === 'процентная' ? '%' : ' ₽'}</div>` : ''}
+        <div class="product-img">👕</div>
+        <div class="product-info">
+          <div class="product-brand">${p.brand || '—'}</div>
+          <div class="product-name">${p.naimenovanie}</div>
+          ${p.razmer ? `<div class="product-size">Размер: ${p.razmer}</div>` : ''}
+          <div class="product-price">${priceHtml}</div>
+          ${p.srednyaya_ocenka ? `<div class="product-rating"><span class="stars">${stars(p.srednyaya_ocenka)}</span> ${p.srednyaya_ocenka} (${p.kolichestvo_otzyvov})</div>` : ''}
+        </div>
+        <button class="product-add-btn" onclick="event.stopPropagation();App.addToCart(${JSON.stringify(p).replace(/"/g,'&quot;')})">+</button>
+      </div>`;
+  }).join('');
+}
+</script>
+</body>
+</html>

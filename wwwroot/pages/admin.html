@@ -1,0 +1,952 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Панель администратора — FamiliaShop</title>
+  <link rel="stylesheet" href="/css/style.css">
+  <style>
+    .admin-layout { display: grid; grid-template-columns: 220px 1fr; gap: 0; min-height: 100vh; }
+    .admin-sidebar { background: var(--black); color: white; padding: 24px 16px; position: sticky; top: 0; height: 100vh; overflow-y: auto; }
+    .admin-logo { font-family: var(--font-display); font-size: 1.2rem; color: white; margin-bottom: 4px; }
+    .admin-logo span { color: var(--accent); }
+    .admin-subtitle { font-size: 0.7rem; color: rgba(255,255,255,0.4); text-transform: uppercase; letter-spacing: 1.5px; margin-bottom: 28px; }
+    .admin-nav-group { margin-bottom: 20px; }
+    .admin-nav-label { font-size: 0.65rem; font-weight: 700; text-transform: uppercase; letter-spacing: 2px; color: rgba(255,255,255,0.3); margin-bottom: 6px; padding: 0 8px; }
+    .admin-nav-btn { display: flex; align-items: center; gap: 10px; width: 100%; padding: 10px 12px; border: none; background: transparent; color: rgba(255,255,255,0.7); font-family: var(--font-body); font-size: 0.85rem; font-weight: 500; border-radius: 8px; cursor: pointer; text-align: left; transition: all 0.15s; }
+    .admin-nav-btn:hover { background: rgba(255,255,255,0.08); color: white; }
+    .admin-nav-btn.active { background: var(--accent); color: white; }
+    .admin-nav-btn .icon { font-size: 1rem; width: 20px; text-align: center; }
+    .admin-main { background: var(--bg); padding: 32px; overflow-y: auto; }
+    .admin-section { display: none; }
+    .admin-section.active { display: block; }
+    .stat-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 16px; margin-bottom: 32px; }
+    .stat-card { background: var(--white); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 20px; }
+    .stat-value { font-size: 2rem; font-weight: 700; margin-bottom: 4px; }
+    .stat-label { font-size: 0.75rem; color: var(--mid); text-transform: uppercase; letter-spacing: 1px; }
+    .stat-icon { font-size: 1.5rem; margin-bottom: 8px; }
+  </style>
+</head>
+<body style="margin:0;">
+
+<div class="admin-layout">
+  <!-- SIDEBAR -->
+  <aside class="admin-sidebar">
+    <div class="admin-logo">FAMILIA<span>SHOP</span></div>
+    <div class="admin-subtitle">Панель управления</div>
+
+    <div class="admin-nav-group">
+      <div class="admin-nav-label">Обзор</div>
+      <button class="admin-nav-btn active" onclick="showAdminSection('dashboard', this)"><span class="icon">📊</span>Дашборд</button>
+    </div>
+    <div class="admin-nav-group">
+      <div class="admin-nav-label">Каталог</div>
+      <button class="admin-nav-btn" onclick="showAdminSection('products', this)"><span class="icon">👕</span>Товары</button>
+      <button class="admin-nav-btn" onclick="showAdminSection('brands', this)"><span class="icon">🏷️</span>Бренды</button>
+      <button class="admin-nav-btn" onclick="showAdminSection('categories', this)"><span class="icon">📂</span>Категории</button>
+      <button class="admin-nav-btn" onclick="showAdminSection('sizes', this)"><span class="icon">📏</span>Размеры</button>
+    </div>
+    <div class="admin-nav-group">
+      <div class="admin-nav-label">Продажи</div>
+      <button class="admin-nav-btn" onclick="showAdminSection('orders', this)"><span class="icon">📦</span>Заказы</button>
+      <button class="admin-nav-btn" onclick="showAdminSection('buyers', this)"><span class="icon">👥</span>Покупатели</button>
+    </div>
+    <div class="admin-nav-group">
+      <div class="admin-nav-label">Маркетинг</div>
+      <button class="admin-nav-btn" onclick="showAdminSection('coupons', this)"><span class="icon">🎟️</span>Купоны</button>
+      <button class="admin-nav-btn" onclick="showAdminSection('discounts', this)"><span class="icon">💥</span>Скидки</button>
+    </div>
+    <div class="admin-nav-group">
+      <div class="admin-nav-label">Аналитика</div>
+      <button class="admin-nav-btn" onclick="showAdminSection('stats', this)"><span class="icon">📈</span>Рейтинг товаров</button>
+    </div>
+    <div class="admin-nav-group">
+      <div class="admin-nav-label">Справочники</div>
+      <button class="admin-nav-btn" onclick="showAdminSection('delivery', this)"><span class="icon">🚚</span>Доставка / Оплата</button>
+    </div>
+
+    <div style="margin-top:auto;padding-top:24px;border-top:1px solid rgba(255,255,255,0.1);">
+      <a href="/index.html" class="admin-nav-btn"><span class="icon">🌐</span>На сайт</a>
+    </div>
+  </aside>
+
+  <!-- MAIN -->
+  <main class="admin-main">
+
+    <!-- DASHBOARD -->
+    <div id="admin-dashboard" class="admin-section active">
+      <h2 style="margin-bottom:24px;">Дашборд</h2>
+      <div class="stat-grid" id="statsGrid">
+        <div class="loading-overlay" style="grid-column:1/-1"><div class="spinner"></div></div>
+      </div>
+      <h3 style="font-family:var(--font-body);font-weight:700;margin-bottom:16px;">Последние заказы</h3>
+      <div id="recentOrders" class="card" style="padding:0;overflow:hidden;">
+        <div class="loading-overlay"><div class="spinner"></div></div>
+      </div>
+    </div>
+
+    <!-- PRODUCTS -->
+    <div id="admin-products" class="admin-section">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:24px;flex-wrap:wrap;gap:12px;">
+        <h2>Товары</h2>
+        <button class="btn btn-accent" onclick="openProductModal()">+ Добавить товар</button>
+      </div>
+      <div id="productsTable" class="card" style="padding:0;overflow:hidden;">
+        <div class="loading-overlay"><div class="spinner"></div></div>
+      </div>
+    </div>
+
+    <!-- BRANDS -->
+    <div id="admin-brands" class="admin-section">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:24px;">
+        <h2>Бренды</h2>
+        <button class="btn btn-accent" onclick="openBrandModal()">+ Добавить бренд</button>
+      </div>
+      <div id="brandsTable" class="card" style="padding:0;overflow:hidden;">
+        <div class="loading-overlay"><div class="spinner"></div></div>
+      </div>
+    </div>
+
+    <!-- CATEGORIES -->
+    <div id="admin-categories" class="admin-section">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:24px;">
+        <h2>Категории</h2>
+        <button class="btn btn-accent" onclick="openCatModal()">+ Добавить категорию</button>
+      </div>
+      <div id="categoriesTable" class="card" style="padding:0;overflow:hidden;">
+        <div class="loading-overlay"><div class="spinner"></div></div>
+      </div>
+    </div>
+
+    <!-- SIZES -->
+    <div id="admin-sizes" class="admin-section">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:24px;">
+        <h2>Размеры</h2>
+        <button class="btn btn-accent" onclick="openSizeModal()">+ Добавить размер</button>
+      </div>
+      <div id="sizesTable" class="card" style="padding:0;overflow:hidden;">
+        <div class="loading-overlay"><div class="spinner"></div></div>
+      </div>
+    </div>
+
+    <!-- ORDERS -->
+    <div id="admin-orders" class="admin-section">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:24px;flex-wrap:wrap;gap:12px;">
+        <h2>Заказы</h2>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;">
+          <select class="form-select" style="width:auto" onchange="loadOrdersAdmin(this.value)" id="orderStatusSel">
+            <option value="">Все статусы</option>
+            <option>Оформлен</option>
+            <option>В сборке</option>
+            <option>Передан в доставку</option>
+            <option>Доставлен</option>
+            <option>Отменён</option>
+          </select>
+        </div>
+      </div>
+      <div id="ordersTable" class="card" style="padding:0;overflow:hidden;">
+        <div class="loading-overlay"><div class="spinner"></div></div>
+      </div>
+    </div>
+
+    <!-- BUYERS -->
+    <div id="admin-buyers" class="admin-section">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:24px;">
+        <h2>Покупатели</h2>
+        <span id="buyersCount" style="color:var(--mid);font-size:0.875rem;"></span>
+      </div>
+      <div id="buyersTable" class="card" style="padding:0;overflow:hidden;">
+        <div class="loading-overlay"><div class="spinner"></div></div>
+      </div>
+    </div>
+
+    <!-- COUPONS -->
+    <div id="admin-coupons" class="admin-section">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:24px;">
+        <h2>Купоны</h2>
+        <button class="btn btn-accent" onclick="openCouponModal()">+ Создать купон</button>
+      </div>
+      <div id="couponsTable" class="card" style="padding:0;overflow:hidden;">
+        <div class="loading-overlay"><div class="spinner"></div></div>
+      </div>
+    </div>
+
+    <!-- DISCOUNTS -->
+    <div id="admin-discounts" class="admin-section">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:24px;">
+        <h2>Скидки на товары</h2>
+        <button class="btn btn-accent" onclick="openDiscountModal()">+ Создать скидку</button>
+      </div>
+      <div id="discountsTable" class="card" style="padding:0;overflow:hidden;">
+        <div class="loading-overlay"><div class="spinner"></div></div>
+      </div>
+    </div>
+
+    <!-- STATS: v_РейтингТоваров -->
+    <div id="admin-stats" class="admin-section">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:24px;">
+        <h2>Рейтинг и статистика товаров</h2>
+        <span style="font-size:0.8rem;color:var(--mid);">Данные из представления v_РейтингТоваров</span>
+      </div>
+      <div id="statsTable" class="card" style="padding:0;overflow:hidden;">
+        <div class="loading-overlay"><div class="spinner"></div></div>
+      </div>
+    </div>
+
+    <!-- DELIVERY/PAYMENT -->
+    <div id="admin-delivery" class="admin-section">
+      <h2 style="margin-bottom:24px;">Справочники доставки и оплаты</h2>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:24px;">
+        <div>
+          <h3 style="font-family:var(--font-body);font-weight:700;margin-bottom:16px;">Способы получения</h3>
+          <div id="deliveryList" class="card" style="padding:0;overflow:hidden;"><div class="loading-overlay"><div class="spinner"></div></div></div>
+        </div>
+        <div>
+          <h3 style="font-family:var(--font-body);font-weight:700;margin-bottom:16px;">Способы оплаты</h3>
+          <div id="paymentList" class="card" style="padding:0;overflow:hidden;"><div class="loading-overlay"><div class="spinner"></div></div></div>
+        </div>
+      </div>
+    </div>
+
+  </main>
+</div>
+
+<!-- Modals -->
+<div id="productModal" class="modal-overlay">
+  <div class="modal" style="max-width:600px;">
+    <div class="modal-header">
+      <h2>Товар</h2>
+      <button class="modal-close" onclick="Modal.close('productModal')">✕</button>
+    </div>
+    <div class="modal-body">
+      <input type="hidden" id="productId">
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">Артикул *</label>
+          <input class="form-input" id="pArtikul" placeholder="ART-001" data-validate="required">
+          <div class="field-error"></div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Цена (₽) *</label>
+          <input class="form-input" id="pCena" type="number" min="0" placeholder="1990" data-validate="required,positive">
+          <div class="field-error"></div>
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Наименование *</label>
+        <input class="form-input" id="pName" placeholder="Платье летнее" data-validate="required">
+        <div class="field-error"></div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">Бренд</label>
+          <select class="form-select" id="pBrand"></select>
+          <div class="field-error"></div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Размер</label>
+          <select class="form-select" id="pRazmer"></select>
+          <div class="field-error"></div>
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Категории</label>
+        <div id="pCategories" style="display:flex;flex-wrap:wrap;gap:8px;margin-top:6px;"></div>
+        <div class="field-error"></div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Описание</label>
+        <textarea class="form-textarea" id="pDesc" placeholder="Описание товара..."></textarea>
+        <div class="field-error"></div>
+      </div>
+      <button class="btn btn-accent btn-full" onclick="saveProduct()">Сохранить</button>
+    </div>
+  </div>
+</div>
+
+<div id="brandModal" class="modal-overlay">
+  <div class="modal">
+    <div class="modal-header"><h2>Бренд</h2><button class="modal-close" onclick="Modal.close('brandModal')">✕</button></div>
+    <div class="modal-body">
+      <div class="form-group">
+        <label class="form-label">Название *</label>
+        <input class="form-input" id="bName" placeholder="Nike" data-validate="required">
+        <div class="field-error"></div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Страна</label>
+        <input class="form-input" id="bCountry" placeholder="США">
+        <div class="field-error"></div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Описание</label>
+        <textarea class="form-textarea" id="bDesc"></textarea>
+        <div class="field-error"></div>
+      </div>
+      <button class="btn btn-accent btn-full" onclick="saveBrand()">Сохранить</button>
+    </div>
+  </div>
+</div>
+
+<div id="catModal" class="modal-overlay">
+  <div class="modal">
+    <div class="modal-header"><h2>Категория</h2><button class="modal-close" onclick="Modal.close('catModal')">✕</button></div>
+    <div class="modal-body">
+      <div class="form-group">
+        <label class="form-label">Название *</label>
+        <input class="form-input" id="catName" placeholder="Платья" data-validate="required">
+        <div class="field-error"></div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Описание</label>
+        <textarea class="form-textarea" id="catDesc"></textarea>
+        <div class="field-error"></div>
+      </div>
+      <button class="btn btn-accent btn-full" onclick="saveCat()">Сохранить</button>
+    </div>
+  </div>
+</div>
+
+<div id="sizeModal" class="modal-overlay">
+  <div class="modal">
+    <div class="modal-header"><h2>Размер</h2><button class="modal-close" onclick="Modal.close('sizeModal')">✕</button></div>
+    <div class="modal-body">
+      <div class="form-group">
+        <label class="form-label">Значение *</label>
+        <input class="form-input" id="szValue" placeholder="M" data-validate="required">
+        <div class="field-error"></div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Тип размерной сетки *</label>
+        <select class="form-select" id="szType" data-validate="required">
+          <option value="буквенная">Буквенная (XS/S/M/L/XL)</option>
+          <option value="числовая EU">Числовая EU</option>
+          <option value="числовая RU">Числовая RU</option>
+        </select>
+        <div class="field-error"></div>
+      </div>
+      <button class="btn btn-accent btn-full" onclick="saveSize()">Сохранить</button>
+    </div>
+  </div>
+</div>
+
+<div id="couponModal" class="modal-overlay">
+  <div class="modal">
+    <div class="modal-header"><h2>Купон</h2><button class="modal-close" onclick="Modal.close('couponModal')">✕</button></div>
+    <div class="modal-body">
+      <div class="form-group">
+        <label class="form-label">Промокод *</label>
+        <input class="form-input" id="cpCode" placeholder="SUMMER20" data-validate="required">
+        <div class="field-error"></div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">Тип скидки</label>
+          <select class="form-select" id="cpType">
+            <option value="процентная">Процентная</option>
+            <option value="фиксированная">Фиксированная (₽)</option>
+          </select>
+          <div class="field-error"></div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Размер скидки *</label>
+          <input class="form-input" id="cpValue" type="number" min="0" placeholder="20" data-validate="required,positive">
+          <div class="field-error"></div>
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">Дата начала</label>
+          <input class="form-input" id="cpFrom" type="date" data-validate="dateStart">
+          <div class="field-error"></div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Дата окончания</label>
+          <input class="form-input" id="cpTo" type="date" data-validate="dateEnd,dateRange">
+          <div class="field-error"></div>
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Мин. сумма заказа (₽)</label>
+        <input class="form-input" id="cpMinSum" type="number" min="0" placeholder="0" data-validate="positive">
+        <div class="field-error"></div>
+      </div>
+      <button class="btn btn-accent btn-full" onclick="saveCoupon()">Сохранить</button>
+    </div>
+  </div>
+</div>
+
+<div id="discountModal" class="modal-overlay">
+  <div class="modal">
+    <div class="modal-header"><h2>Скидка</h2><button class="modal-close" onclick="Modal.close('discountModal')">✕</button></div>
+    <div class="modal-body">
+      <div class="form-group">
+        <label class="form-label">Название *</label>
+        <input class="form-input" id="dName" placeholder="Зимняя распродажа" data-validate="required">
+        <div class="field-error"></div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">Тип</label>
+          <select class="form-select" id="dType">
+            <option value="процентная">Процентная</option>
+            <option value="фиксированная">Фиксированная (₽)</option>
+          </select>
+          <div class="field-error"></div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Размер *</label>
+          <input class="form-input" id="dValue" type="number" min="0" placeholder="30" data-validate="required,positive">
+          <div class="field-error"></div>
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">Дата начала</label>
+          <input class="form-input" id="dFrom" type="date" data-validate="dateStart">
+          <div class="field-error"></div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Дата окончания</label>
+          <input class="form-input" id="dTo" type="date" data-validate="dateEnd,dateRange">
+          <div class="field-error"></div>
+        </div>
+      </div>
+      <button class="btn btn-accent btn-full" onclick="saveDiscount()">Сохранить</button>
+    </div>
+  </div>
+</div>
+
+<div id="orderLogModal" class="modal-overlay">
+  <div class="modal" style="max-width:600px;">
+    <div class="modal-header">
+      <h2 id="orderLogTitle">История статусов</h2>
+      <button class="modal-close" onclick="Modal.close('orderLogModal')">✕</button>
+    </div>
+    <div class="modal-body" id="orderLogBody"></div>
+  </div>
+</div>
+
+<div id="orderStatusModal" class="modal-overlay">
+  <div class="modal">
+    <div class="modal-header"><h2>Изменить статус заказа</h2><button class="modal-close" onclick="Modal.close('orderStatusModal')">✕</button></div>
+    <div class="modal-body">
+      <input type="hidden" id="editOrderId">
+      <div class="form-group">
+        <label class="form-label">Новый статус</label>
+        <select class="form-select" id="newOrderStatus">
+          <option>Оформлен</option>
+          <option>В сборке</option>
+          <option>Передан в доставку</option>
+          <option>Доставлен</option>
+          <option>Отменён</option>
+        </select>
+        <div class="field-error"></div>
+      </div>
+      <button class="btn btn-accent btn-full" onclick="updateOrderStatus()">Сохранить</button>
+    </div>
+  </div>
+</div>
+
+<div id="toastContainer" class="toast-container"></div>
+<script src="/js/api.js"></script>
+<script src="/js/app.js"></script>
+<script>
+let adminBrands = [], adminCats = [], adminSizes = [];
+
+document.addEventListener('DOMContentLoaded', async () => {
+  await loadDashboard();
+  [adminBrands, adminCats, adminSizes] = await Promise.all([
+    api.refs.brands(), api.refs.categories(), api.refs.sizes()
+  ]);
+});
+
+function showAdminSection(name, btn) {
+  document.querySelectorAll('.admin-section').forEach(s => s.classList.remove('active'));
+  document.getElementById(`admin-${name}`).classList.add('active');
+  document.querySelectorAll('.admin-nav-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+
+  const loaders = {
+    products: loadProductsAdmin,
+    brands: loadBrandsAdmin,
+    categories: loadCategoriesAdmin,
+    sizes: loadSizesAdmin,
+    orders: () => loadOrdersAdmin(''),
+    buyers: loadBuyersAdmin,
+    coupons: loadCouponsAdmin,
+    discounts: loadDiscountsAdmin,
+    delivery: loadDeliveryAdmin,
+    stats: loadStatsAdmin,
+  };
+  if (loaders[name]) loaders[name]();
+}
+
+// ===== DASHBOARD =====
+async function loadDashboard() {
+  try {
+    const [products, orders, buyers, coupons] = await Promise.all([
+      api.products.getAll(), api.orders.getAll(), api.buyers.getAll(), api.coupons.getAll()
+    ]);
+    const revenue = orders.reduce((s, o) => s + (o.itogovaya_summa || 0), 0);
+    document.getElementById('statsGrid').innerHTML = `
+      <div class="stat-card"><div class="stat-icon">👕</div><div class="stat-value">${products.length}</div><div class="stat-label">Товаров</div></div>
+      <div class="stat-card"><div class="stat-icon">📦</div><div class="stat-value">${orders.length}</div><div class="stat-label">Заказов</div></div>
+      <div class="stat-card"><div class="stat-icon">👥</div><div class="stat-value">${buyers.length}</div><div class="stat-label">Покупателей</div></div>
+      <div class="stat-card"><div class="stat-icon">💰</div><div class="stat-value">${fmt(revenue)}</div><div class="stat-label">Выручка</div></div>
+      <div class="stat-card"><div class="stat-icon">🎟️</div><div class="stat-value">${coupons.length}</div><div class="stat-label">Купонов</div></div>
+    `;
+    const recent = orders.slice(0, 8);
+    document.getElementById('recentOrders').innerHTML = `
+      <table class="data-table">
+        <thead><tr><th>№</th><th>Покупатель</th><th>Сумма</th><th>Статус</th><th>Дата</th><th></th></tr></thead>
+        <tbody>${recent.map(o => `
+          <tr>
+            <td><strong>#${o.kod_zakaza}</strong></td>
+            <td>${o.imya_pokupatelya || '—'}</td>
+            <td><strong>${fmt(o.itogovaya_summa)}</strong></td>
+            <td>${statusBadge(o.status)}</td>
+            <td>${fmtDate(o.data_oformleniya)}</td>
+            <td style="display:flex;gap:4px;"><button class="btn btn-ghost btn-sm" onclick="openOrderStatus(${o.kod_zakaza},'${o.status}')">✏️</button><button class="btn btn-ghost btn-sm" onclick="showOrderLog(${o.kod_zakaza})" title="История">📋</button></td>
+          </tr>`).join('')}
+        </tbody>
+      </table>`;
+  } catch (e) { console.error(e); }
+}
+
+// ===== PRODUCTS =====
+async function loadProductsAdmin() {
+  try {
+    const products = await api.products.getAll();
+    document.getElementById('productsTable').innerHTML = `
+      <table class="data-table">
+        <thead><tr><th>ID</th><th>Артикул</th><th>Наименование</th><th>Бренд</th><th>Размер</th><th>Цена</th><th></th></tr></thead>
+        <tbody>${products.map(p => `
+          <tr>
+            <td style="color:var(--mid)">#${p.kod_tovara}</td>
+            <td style="font-family:monospace;font-size:0.8rem;">${p.artikul}</td>
+            <td><strong>${p.naimenovanie}</strong><br><span style="font-size:0.75rem;color:var(--mid)">${(p.kategorii||[]).join(', ')}</span></td>
+            <td>${p.brand || '—'}</td>
+            <td>${p.razmer || '—'}</td>
+            <td><strong>${fmt(p.cena)}</strong></td>
+            <td style="display:flex;gap:6px;padding:10px 16px;">
+              <button class="btn btn-ghost btn-sm" onclick="editProduct(${p.kod_tovara})">✏️</button>
+              <button class="btn btn-ghost btn-sm" style="color:var(--accent)" onclick="deleteProduct(${p.kod_tovara})">🗑️</button>
+            </td>
+          </tr>`).join('')}
+        </tbody>
+      </table>`;
+  } catch {}
+}
+
+async function openProductModal(id = null) {
+  [adminBrands, adminCats, adminSizes] = await Promise.all([
+    api.refs.brands(), api.refs.categories(), api.refs.sizes()
+  ]);
+  document.getElementById('productId').value = id || '';
+  document.getElementById('pArtikul').value = '';
+  document.getElementById('pName').value = '';
+  document.getElementById('pCena').value = '';
+  document.getElementById('pDesc').value = '';
+  document.getElementById('pBrand').innerHTML = `<option value="">— Не указан —</option>` + adminBrands.map(b => `<option value="${b.kod_brenda}">${b.nazvanie}</option>`).join('');
+  document.getElementById('pRazmer').innerHTML = `<option value="">— Не указан —</option>` + adminSizes.map(s => `<option value="${s.kod_razmera}">${s.znachenie} (${s.tip_razmernoy_setki})</option>`).join('');
+  document.getElementById('pCategories').innerHTML = adminCats.map(c => `
+    <label style="display:flex;align-items:center;gap:6px;padding:6px 10px;border:1px solid var(--border);border-radius:6px;cursor:pointer;font-size:0.8rem;">
+      <input type="checkbox" value="${c.kod_kategorii}" style="accent-color:var(--black)"> ${c.nazvanie}
+    </label>`).join('');
+  Modal.open('productModal');
+}
+
+async function editProduct(id) {
+  await openProductModal(id);
+  const p = await api.products.getById(id);
+  document.getElementById('pArtikul').value = p.artikul || '';
+  document.getElementById('pName').value = p.naimenovanie || '';
+  document.getElementById('pCena').value = p.cena || '';
+  document.getElementById('pDesc').value = p.opisanie || '';
+  if (p.kod_brenda) document.getElementById('pBrand').value = p.kod_brenda;
+  if (p.kod_razmera) document.getElementById('pRazmer').value = p.kod_razmera;
+  const selectedCats = p.kategorii || [];
+  document.querySelectorAll('#pCategories input[type=checkbox]').forEach(cb => {
+    const catName = adminCats.find(c => c.kod_kategorii == cb.value)?.nazvanie;
+    if (catName && selectedCats.includes(catName)) cb.checked = true;
+  });
+}
+
+async function saveProduct() {
+  const modal = document.getElementById('productModal');
+  const form = modal.querySelector('.modal-body');
+  if (!validateForm(form)) {
+    Toast.show('Исправьте ошибки в форме', 'error');
+    return;
+  }
+  const id = document.getElementById('productId')?.value;
+  const data = {
+    artikul: document.getElementById('pArtikul').value.trim(),
+    naimenovanie: document.getElementById('pName').value.trim(),
+    cena: parseFloat(document.getElementById('pCena').value),
+    opisanie: document.getElementById('pDesc').value.trim(),
+    kod_brenda: document.getElementById('pBrand').value || null,
+    kod_razmera: document.getElementById('pRazmer').value || null,
+    kategorii: [...document.querySelectorAll('#pCategories input:checked')].map(c => parseInt(c.value))
+  };
+  if (!data.artikul || !data.naimenovanie || !data.cena) { Toast.show('Заполните обязательные поля', 'error'); return; }
+  try {
+    const pid = document.getElementById('productId').value;
+    if (pid) { await api.products.update(pid, data); Toast.show('Товар обновлён', 'success'); }
+    else { await api.products.create(data); Toast.show('Товар добавлен', 'success'); }
+    Modal.close('productModal');
+    loadProductsAdmin();
+  } catch (e) { Toast.show(e.message, 'error'); }
+}
+
+async function deleteProduct(id) {
+  if (!confirm('Удалить товар?')) return;
+  try { await api.products.delete(id); Toast.show('Удалено'); loadProductsAdmin(); }
+  catch (e) { Toast.show(e.message, 'error'); }
+}
+
+// ===== BRANDS =====
+async function loadBrandsAdmin() {
+  const brands = await api.refs.brands();
+  document.getElementById('brandsTable').innerHTML = `
+    <table class="data-table">
+      <thead><tr><th>ID</th><th>Название</th><th>Страна</th><th>Описание</th><th></th></tr></thead>
+      <tbody>${brands.map(b => `
+        <tr>
+          <td style="color:var(--mid)">#${b.kod_brenda}</td>
+          <td><strong>${b.nazvanie}</strong></td>
+          <td>${b.strana_proiskhozhdeniya || '—'}</td>
+          <td style="color:var(--mid);font-size:0.8rem;">${b.opisanie || '—'}</td>
+          <td><button class="btn btn-ghost btn-sm" style="color:var(--accent)" onclick="deleteBrand(${b.kod_brenda})">🗑️</button></td>
+        </tr>`).join('')}
+      </tbody>
+    </table>`;
+}
+function openBrandModal() { document.getElementById('bName').value=''; document.getElementById('bCountry').value=''; document.getElementById('bDesc').value=''; Modal.open('brandModal'); }
+async function saveBrand() {
+  const modal = document.getElementById('brandModal');
+  const form = modal.querySelector('.modal-body');
+  if (!validateForm(form)) {
+    Toast.show('Исправьте ошибки в форме', 'error');
+    return;
+  }
+  const name = document.getElementById('bName').value.trim();
+  if (!name) { Toast.show('Введите название', 'error'); return; }
+  try { await api.refs.createBrand({ nazvanie: name, strana_proiskhozhdeniya: document.getElementById('bCountry').value, opisanie: document.getElementById('bDesc').value }); Toast.show('Бренд добавлен', 'success'); Modal.close('brandModal'); loadBrandsAdmin(); }
+  catch (e) { Toast.show(e.message, 'error'); }
+}
+async function deleteBrand(id) { if (!confirm('Удалить?')) return; try { await api.refs.deleteBrand(id); Toast.show('Удалено'); loadBrandsAdmin(); } catch (e) { Toast.show(e.message, 'error'); } }
+
+// ===== CATEGORIES =====
+async function loadCategoriesAdmin() {
+  const cats = await api.refs.categories();
+  document.getElementById('categoriesTable').innerHTML = `
+    <table class="data-table">
+      <thead><tr><th>ID</th><th>Название</th><th>Описание</th><th></th></tr></thead>
+      <tbody>${cats.map(c => `
+        <tr>
+          <td style="color:var(--mid)">#${c.kod_kategorii}</td>
+          <td><strong>${c.nazvanie}</strong></td>
+          <td style="color:var(--mid);font-size:0.8rem;">${c.opisanie || '—'}</td>
+          <td><button class="btn btn-ghost btn-sm" style="color:var(--accent)" onclick="deleteCat(${c.kod_kategorii})">🗑️</button></td>
+        </tr>`).join('')}
+      </tbody>
+    </table>`;
+}
+function openCatModal() { document.getElementById('catName').value=''; document.getElementById('catDesc').value=''; Modal.open('catModal'); }
+async function saveCat() {
+  const modal = document.getElementById('catModal');
+  const form = modal.querySelector('.modal-body');
+  if (!validateForm(form)) {
+    Toast.show('Исправьте ошибки в форме', 'error');
+    return;
+  }
+  const name = document.getElementById('catName').value.trim();
+  if (!name) { Toast.show('Введите название', 'error'); return; }
+  try { await api.refs.createCategory({ nazvanie: name, opisanie: document.getElementById('catDesc').value }); Toast.show('Категория добавлена', 'success'); Modal.close('catModal'); loadCategoriesAdmin(); }
+  catch (e) { Toast.show(e.message, 'error'); }
+}
+async function deleteCat(id) { if (!confirm('Удалить?')) return; try { await api.refs.deleteCategory(id); Toast.show('Удалено'); loadCategoriesAdmin(); } catch (e) { Toast.show(e.message, 'error'); } }
+
+// ===== SIZES =====
+async function loadSizesAdmin() {
+  const sizes = await api.refs.sizes();
+  document.getElementById('sizesTable').innerHTML = `
+    <table class="data-table">
+      <thead><tr><th>ID</th><th>Значение</th><th>Тип сетки</th></tr></thead>
+      <tbody>${sizes.map(s => `
+        <tr>
+          <td style="color:var(--mid)">#${s.kod_razmera}</td>
+          <td><strong>${s.znachenie}</strong></td>
+          <td>${s.tip_razmernoy_setki}</td>
+        </tr>`).join('')}
+      </tbody>
+    </table>`;
+}
+function openSizeModal() { document.getElementById('szValue').value=''; Modal.open('sizeModal'); }
+async function saveSize() {
+  const modal = document.getElementById('sizeModal');
+  const form = modal.querySelector('.modal-body');
+  if (!validateForm(form)) {
+    Toast.show('Исправьте ошибки в форме', 'error');
+    return;
+  }
+  const v = document.getElementById('szValue').value.trim();
+  const t = document.getElementById('szType').value;
+  if (!v) { Toast.show('Введите значение', 'error'); return; }
+  try { await api.refs.createSize({ znachenie: v, tip_razmernoy_setki: t }); Toast.show('Размер добавлен', 'success'); Modal.close('sizeModal'); loadSizesAdmin(); }
+  catch (e) { Toast.show(e.message, 'error'); }
+}
+
+// ===== ORDERS =====
+async function loadOrdersAdmin(status) {
+  try {
+    const orders = await api.orders.getAll(status || null);
+    document.getElementById('ordersTable').innerHTML = `
+      <table class="data-table">
+        <thead><tr><th>№</th><th>Покупатель</th><th>Дата</th><th>Доставка</th><th>Оплата</th><th>Сумма</th><th>Статус</th><th></th></tr></thead>
+        <tbody>${orders.map(o => `
+          <tr>
+            <td><strong>#${o.kod_zakaza}</strong></td>
+            <td>${o.imya_pokupatelya || '—'}</td>
+            <td style="font-size:0.8rem;">${fmtDate(o.data_oformleniya)}</td>
+            <td style="font-size:0.8rem;color:var(--mid);">${o.sposob_polucheniya || '—'}</td>
+            <td style="font-size:0.8rem;color:var(--mid);">${o.sposob_oplaty || '—'}</td>
+            <td><strong>${fmt(o.itogovaya_summa)}</strong></td>
+            <td>${statusBadge(o.status)}</td>
+            <td style="display:flex;gap:4px;">
+              <button class="btn btn-ghost btn-sm" onclick="openOrderStatus(${o.kod_zakaza},'${o.status}')" title="Изменить статус">✏️</button>
+              <button class="btn btn-ghost btn-sm" onclick="showOrderLog(${o.kod_zakaza})" title="История статусов">📋</button>
+            </td>
+          </tr>`).join('')}
+        </tbody>
+      </table>`;
+  } catch {}
+}
+
+function openOrderStatus(id, currentStatus) {
+  document.getElementById('editOrderId').value = id;
+  document.getElementById('newOrderStatus').value = currentStatus;
+  Modal.open('orderStatusModal');
+}
+async function updateOrderStatus() {
+  const id = document.getElementById('editOrderId').value;
+  const status = document.getElementById('newOrderStatus').value;
+  try { await api.orders.updateStatus(id, status); Toast.show('Статус обновлён', 'success'); Modal.close('orderStatusModal'); loadOrdersAdmin(document.getElementById('orderStatusSel').value); loadDashboard(); }
+  catch (e) { Toast.show(e.message, 'error'); }
+}
+
+// ===== BUYERS =====
+async function loadBuyersAdmin() {
+  try {
+    const buyers = await api.buyers.getAll();
+    document.getElementById('buyersCount').textContent = `Всего: ${buyers.length}`;
+    document.getElementById('buyersTable').innerHTML = `
+      <table class="data-table">
+        <thead><tr><th>ID</th><th>Имя</th><th>Email</th><th>Телефон</th><th>Дата рег.</th><th></th></tr></thead>
+        <tbody>${buyers.map(b => `
+          <tr>
+            <td style="color:var(--mid)">#${b.kod_pokupatelya}</td>
+            <td><strong>${b.imya}</strong></td>
+            <td>${b.email}</td>
+            <td>${b.telefon || '—'}</td>
+            <td style="font-size:0.8rem;">${fmtDate(b.data_registracii)}</td>
+            <td><button class="btn btn-ghost btn-sm" style="color:var(--accent)" onclick="deleteBuyer(${b.kod_pokupatelya})">🗑️</button></td>
+          </tr>`).join('')}
+        </tbody>
+      </table>`;
+  } catch {}
+}
+async function deleteBuyer(id) { if (!confirm('Удалить покупателя и все его данные?')) return; try { await api.buyers.delete(id); Toast.show('Удалено'); loadBuyersAdmin(); } catch (e) { Toast.show(e.message, 'error'); } }
+
+// ===== COUPONS =====
+async function loadCouponsAdmin() {
+  const coupons = await api.coupons.getAll();
+  document.getElementById('couponsTable').innerHTML = `
+    <table class="data-table">
+      <thead><tr><th>Промокод</th><th>Тип</th><th>Скидка</th><th>Мин. сумма</th><th>Период</th><th></th></tr></thead>
+      <tbody>${coupons.map(c => `
+        <tr>
+          <td><strong style="font-family:monospace;">${c.promokod}</strong></td>
+          <td>${c.tip_skidki}</td>
+          <td><strong>${c.tip_skidki === 'процентная' ? c.razmer_skidki + '%' : fmt(c.razmer_skidki)}</strong></td>
+          <td>${fmt(c.minimalnaya_summa_zakaza)}</td>
+          <td style="font-size:0.8rem;color:var(--mid);">${fmtDate(c.data_nachala)} — ${fmtDate(c.data_okonchaniya)}</td>
+          <td><button class="btn btn-ghost btn-sm" style="color:var(--accent)" onclick="deleteCoupon(${c.kod_kupona})">🗑️</button></td>
+        </tr>`).join('')}
+      </tbody>
+    </table>`;
+}
+function openCouponModal() {
+  const today = new Date().toISOString().split('T')[0];
+  const nextYear = new Date(Date.now() + 365*86400000).toISOString().split('T')[0];
+  document.getElementById('cpCode').value=''; document.getElementById('cpValue').value='';
+  document.getElementById('cpFrom').value = today; document.getElementById('cpTo').value = nextYear;
+  document.getElementById('cpMinSum').value = '0';
+  Modal.open('couponModal');
+}
+async function saveCoupon() {
+  const modal = document.getElementById('couponModal');
+  const form = modal.querySelector('.modal-body');
+  if (!validateForm(form)) {
+    Toast.show('Исправьте ошибки в форме', 'error');
+    return;
+  }
+  const code = document.getElementById('cpCode').value.trim();
+  const val = parseFloat(document.getElementById('cpValue').value);
+  if (!code || !val) { Toast.show('Заполните обязательные поля', 'error'); return; }
+  try {
+    await api.coupons.create({ promokod: code, tip_skidki: document.getElementById('cpType').value, razmer_skidki: val, data_nachala: document.getElementById('cpFrom').value, data_okonchaniya: document.getElementById('cpTo').value, minimalnaya_summa_zakaza: parseFloat(document.getElementById('cpMinSum').value) || 0 });
+    Toast.show('Купон создан', 'success'); Modal.close('couponModal'); loadCouponsAdmin();
+  } catch (e) { Toast.show(e.message, 'error'); }
+}
+async function deleteCoupon(id) { if (!confirm('Удалить?')) return; try { await api.coupons.delete(id); Toast.show('Удалено'); loadCouponsAdmin(); } catch (e) { Toast.show(e.message, 'error'); } }
+
+// ===== DISCOUNTS =====
+async function loadDiscountsAdmin() {
+  const discounts = await api.discounts.getAll();
+  document.getElementById('discountsTable').innerHTML = `
+    <table class="data-table">
+      <thead><tr><th>Название</th><th>Тип</th><th>Размер</th><th>Период</th><th></th></tr></thead>
+      <tbody>${discounts.map(d => `
+        <tr>
+          <td><strong>${d.nazvanie}</strong></td>
+          <td>${d.tip}</td>
+          <td><strong>${d.tip === 'процентная' ? d.razmer + '%' : fmt(d.razmer)}</strong></td>
+          <td style="font-size:0.8rem;color:var(--mid);">${fmtDate(d.data_nachala)} — ${fmtDate(d.data_okonchaniya)}</td>
+          <td><button class="btn btn-ghost btn-sm" style="color:var(--accent)" onclick="deleteDiscount(${d.kod_skidki})">🗑️</button></td>
+        </tr>`).join('')}
+      </tbody>
+    </table>`;
+}
+function openDiscountModal() {
+  const today = new Date().toISOString().split('T')[0];
+  const next = new Date(Date.now() + 30*86400000).toISOString().split('T')[0];
+  document.getElementById('dName').value=''; document.getElementById('dValue').value='';
+  document.getElementById('dFrom').value = today; document.getElementById('dTo').value = next;
+  Modal.open('discountModal');
+}
+async function saveDiscount() {
+  const modal = document.getElementById('discountModal');
+  const form = modal.querySelector('.modal-body');
+  if (!validateForm(form)) {
+    Toast.show('Исправьте ошибки в форме', 'error');
+    return;
+  }
+  const name = document.getElementById('dName').value.trim();
+  const val = parseFloat(document.getElementById('dValue').value);
+  if (!name || !val) { Toast.show('Заполните обязательные поля', 'error'); return; }
+  try {
+    await api.discounts.create({ nazvanie: name, tip: document.getElementById('dType').value, razmer: val, data_nachala: document.getElementById('dFrom').value, data_okonchaniya: document.getElementById('dTo').value });
+    Toast.show('Скидка создана', 'success'); Modal.close('discountModal'); loadDiscountsAdmin();
+  } catch (e) { Toast.show(e.message, 'error'); }
+}
+async function deleteDiscount(id) { if (!confirm('Удалить?')) return; try { await api.discounts.delete(id); Toast.show('Удалено'); loadDiscountsAdmin(); } catch (e) { Toast.show(e.message, 'error'); } }
+
+// ===== STATS: v_РейтингТоваров =====
+async function loadStatsAdmin() {
+  try {
+    const stats = await api.products.getStats();
+    document.getElementById('statsTable').innerHTML = `
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>Товар</th>
+            <th>Бренд</th>
+            <th>Цена</th>
+            <th style="text-align:center">★ Рейтинг</th>
+            <th style="text-align:center">Отзывов</th>
+            <th style="text-align:center">5★</th>
+            <th style="text-align:center">4★</th>
+            <th style="text-align:center">≤3★</th>
+            <th style="text-align:right">Продано</th>
+            <th style="text-align:right">Выручка</th>
+            <th style="text-align:center">Скидок</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${stats.map(s => `
+            <tr>
+              <td>
+                <strong>${s.naimenovanie}</strong>
+                <div style="font-size:0.75rem;color:var(--mid);font-family:monospace">${s.artikul}</div>
+              </td>
+              <td style="font-size:0.85rem">${s.brand || '—'}</td>
+              <td><strong>${fmt(s.cena_bazovaya)}</strong></td>
+              <td style="text-align:center">
+                ${s.srednyaya_ocenka
+                  ? `<span style="color:#f59e0b;font-size:1rem">★</span> <strong>${Number(s.srednyaya_ocenka).toFixed(1)}</strong>`
+                  : '<span style="color:var(--mid)">—</span>'}
+              </td>
+              <td style="text-align:center">${s.kolichestvo_otzyvov}</td>
+              <td style="text-align:center;color:#2e7d32">${s.otsenok_5 ?? 0}</td>
+              <td style="text-align:center;color:#558b2f">${s.otsenok_4 ?? 0}</td>
+              <td style="text-align:center;color:var(--accent)">${(s.otsenok_3 ?? 0) + (s.otsenok_1_2 ?? 0)}</td>
+              <td style="text-align:right"><strong>${s.prodano_shtuk}</strong> шт.</td>
+              <td style="text-align:right"><strong>${fmt(s.viruchka_vsego)}</strong></td>
+              <td style="text-align:center">
+                ${s.aktivnyh_skidok > 0
+                  ? `<span class="product-badge" style="position:static;display:inline-block">${s.aktivnyh_skidok}</span>`
+                  : '<span style="color:var(--light)">—</span>'}
+              </td>
+            </tr>
+          `).join('')}
+        </tbody>
+      </table>`;
+  } catch (e) {
+    document.getElementById('statsTable').innerHTML =
+      `<p style="padding:24px;color:var(--mid)">Ошибка загрузки: ${e.message}</p>`;
+  }
+}
+
+// ===== ORDER LOG: ЛогСтатусовЗаказа =====
+async function showOrderLog(id) {
+  document.getElementById('orderLogTitle').textContent = `История статусов — заказ #${id}`;
+  document.getElementById('orderLogBody').innerHTML =
+    '<div class="loading-overlay"><div class="spinner"></div></div>';
+  Modal.open('orderLogModal');
+  try {
+    const log = await api.orders.getLog(id);
+    if (!log.length) {
+      document.getElementById('orderLogBody').innerHTML =
+        '<div class="empty-state" style="padding:32px"><div class="empty-state-icon">📋</div>' +
+        '<h3>История пуста</h3><p>Статус заказа ещё не менялся</p></div>';
+      return;
+    }
+    document.getElementById('orderLogBody').innerHTML = `
+      <p style="font-size:0.8rem;color:var(--mid);margin-bottom:16px;">
+        Журнал заполняется автоматически триггером trg_ЛогСтатусов
+      </p>
+      <table class="data-table">
+        <thead><tr><th>#</th><th>Было</th><th>Стало</th><th>Дата</th></tr></thead>
+        <tbody>
+          ${log.map(r => `
+            <tr>
+              <td style="color:var(--mid)">${r.kod_zapisi}</td>
+              <td>${r.status_staryy ? statusBadge(r.status_staryy) : '<span style="color:var(--mid)">—</span>'}</td>
+              <td>${statusBadge(r.status_novyy)}</td>
+              <td style="font-size:0.8rem">${fmtDate(r.data_izmeneniya)}</td>
+            </tr>
+          `).join('')}
+        </tbody>
+      </table>`;
+  } catch (e) {
+    document.getElementById('orderLogBody').innerHTML =
+      `<p style="color:var(--accent)">Ошибка: ${e.message}</p>`;
+  }
+}
+
+// ===== DELIVERY/PAYMENT =====
+async function loadDeliveryAdmin() {
+  const [dlv, pay] = await Promise.all([api.refs.deliveryMethods(), api.refs.paymentMethods()]);
+  document.getElementById('deliveryList').innerHTML = `
+    <table class="data-table"><thead><tr><th>ID</th><th>Название</th><th>Описание</th></tr></thead>
+    <tbody>${dlv.map(d=>`<tr><td>#${d.kod_sposoba_polucheniya}</td><td><strong>${d.nazvanie}</strong></td><td style="color:var(--mid);font-size:0.8rem;">${d.opisanie||'—'}</td></tr>`).join('')}</tbody></table>`;
+  document.getElementById('paymentList').innerHTML = `
+    <table class="data-table"><thead><tr><th>ID</th><th>Название</th><th>Описание</th></tr></thead>
+    <tbody>${pay.map(p=>`<tr><td>#${p.kod_sposoba_oplaty}</td><td><strong>${p.nazvanie}</strong></td><td style="color:var(--mid);font-size:0.8rem;">${p.opisanie||'—'}</td></tr>`).join('')}</tbody></table>`;
+}
+</script>
+</body>
+</html>

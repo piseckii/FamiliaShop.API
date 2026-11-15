@@ -1,0 +1,74 @@
+@host = http://localhost:5292
+
+### Каталог товаров
+GET {{host}}/api/products
+Accept: application/json
+
+### Каталог с фильтрами
+GET {{host}}/api/products?brand=1&minPrice=1000&maxPrice=10000&search=куртка
+Accept: application/json
+
+### Карточка товара
+GET {{host}}/api/products/1
+Accept: application/json
+
+### Статистика по товарам
+GET {{host}}/api/products/stats
+Accept: application/json
+
+### Покупатель по email (упрощённый вход)
+GET {{host}}/api/buyers/email/buyer2@example.com
+Accept: application/json
+
+### Адреса покупателя
+GET {{host}}/api/buyers/2/addresses
+Accept: application/json
+
+### Заказы покупателя
+GET {{host}}/api/buyers/2/orders
+Accept: application/json
+
+### Корзина покупателя
+GET {{host}}/api/cart/2
+Accept: application/json
+
+### Добавить товар в корзину
+POST {{host}}/api/cart/2/items
+Content-Type: application/json
+
+{
+  "kod_tovara": 1,
+  "kolichestvo": 1
+}
+
+### Изменить количество товара
+PUT {{host}}/api/cart/2/items/1
+Content-Type: application/json
+
+{
+  "kolichestvo": 2
+}
+
+### Оформить заказ из корзины
+POST {{host}}/api/orders
+Content-Type: application/json
+
+{
+  "kod_pokupatelya": 2,
+  "kod_adresa": 3,
+  "kod_sposoba_polucheniya": 1,
+  "kod_sposoba_oplaty": 1,
+  "kod_kupona": null
+}
+
+### История статусов заказа
+GET {{host}}/api/orders/3/log
+Accept: application/json
+
+### Проверить промокод
+GET {{host}}/api/coupons/validate/FAMILIA10
+Accept: application/json
+
+### Отзывы о товаре
+GET {{host}}/api/reviews/product/13
+Accept: application/json
